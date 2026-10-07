@@ -1,44 +1,63 @@
 import flet as ft
+from datetime import datetime
 
-class Task:
-    def __init__(self, text, done=False):
+
+class Note:
+    def __init__(self, text, category="общее"):
         self.text = text
-        self.done = done
+        self.category = category
+        self.important = False
+        self.created = datetime.now().strftime("%d.%m %H:%M")
+        self.views = 0
+
+    def show(self):
+        self.views += 1
+        return f"[{self.category}] {self.text} — {self.created} (открыто {self.views})"
+
+
+class NoteCheck(ft.Checkbox):
+    def __init__(self, note, toggle):
+        super().__init__()
+        self.note = note
+        self.label = note.show()
+        self.on_change = lambda e: toggle(note, e.control.value)
+
 
 def main(page: ft.Page):
-    page.title = "Todo"
+    page.title = "Заметки"
 
-    tasks = []
-    list_view = ft.ListView(expand=True)
-    field = ft.TextField(hint_text="задача...", expand=True)
+    notes = []
+    lv = ft.ListView(expand=True)
+    field = ft.TextField(hint_text="новая заметка...", expand=True,
+                         border_color=ft.Colors.PURPLE_200)
 
     def draw():
-        list_view.controls.clear()
-        for t in tasks:
-            cb = ft.Checkbox(label=t.text, value=t.done)
-            cb.on_change = lambda e, task=t: setattr(task, "done", e.control.value)
-            list_view.controls.append(cb)
+        lv.controls.clear()
+        for n in notes:
+            lv.controls.append(NoteCheck(n, toggle))
         page.update()
+
+    def toggle(note, val):
+        note.important = val
 
     def add(e):
         if field.value:
-            tasks.append(Task(field.value))
+            notes.append(Note(field.value))
             field.value = ""
             draw()
 
     def clear(e):
-        tasks[:] = [t for t in tasks if not t.done]
+        notes[:] = [n for n in notes if n.important]
         draw()
+
+    field.on_submit = add
 
     page.add(field, ft.Row([
         ft.ElevatedButton("добавить", on_click=add),
-        ft.TextButton("убрать готовые", on_click=clear),
-    ]), list_view)
+        ft.TextButton("оставить важные", on_click=clear),
+    ]), ft.Divider(), lv)
 
-    page.floating_action_button = ft.FloatingActionButton(
-        icon=ft.Icons.ADD, on_click=add)
-
-    field.on_submit = add
     draw()
+
 
 ft.app(main)
