@@ -1,8 +1,15 @@
 import flet as ft
+from abc import ABC, abstractmethod
 from datetime import datetime
 
 
-class Note:
+class Base(ABC):
+    @abstractmethod
+    def build(self):
+        ...
+
+
+class Note(Base):
     def __init__(self, text, category="общее"):
         self.text = text
         self.category = category
@@ -10,17 +17,47 @@ class Note:
         self.created = datetime.now().strftime("%d.%m %H:%M")
         self.views = 0
 
-    def show(self):
+    def build(self):
         self.views += 1
         return f"[{self.category}] {self.text} — {self.created} (открыто {self.views})"
 
 
-class NoteCheck(ft.Checkbox):
+class NoteField(Base, ft.TextField):
+    def __init__(self):
+        ft.TextField.__init__(self)
+        self.hint_text = "новая заметка..."
+        self.expand = True
+        self.border_color = ft.Colors.PURPLE_200
+        self.focused_border_color = ft.Colors.PURPLE_400
+
+    def build(self):
+        return self
+
+
+class NoteCheck(Base, ft.Checkbox):
     def __init__(self, note, toggle):
-        super().__init__()
+        ft.Checkbox.__init__(self)
         self.note = note
-        self.label = note.show()
+        self.label = note.build()
         self.on_change = lambda e: toggle(note, e.control.value)
+
+    def build(self):
+        return self
+
+
+class AddButton(Base, ft.ElevatedButton):
+    def __init__(self, on_click):
+        ft.ElevatedButton.__init__(self)
+        self.text = "добавить"
+        self.icon = ft.Icons.EDIT_NOTE
+        self.on_click = on_click
+        self.style = ft.ButtonStyle(
+            color=ft.Colors.WHITE,
+            bgcolor=ft.Colors.PURPLE_400,
+        )
+
+    def build(self):
+        return self
 
 
 def main(page: ft.Page):
@@ -28,8 +65,7 @@ def main(page: ft.Page):
 
     notes = []
     lv = ft.ListView(expand=True)
-    field = ft.TextField(hint_text="новая заметка...", expand=True,
-                         border_color=ft.Colors.PURPLE_200)
+    field = NoteField()
 
     def draw():
         lv.controls.clear()
@@ -53,7 +89,7 @@ def main(page: ft.Page):
     field.on_submit = add
 
     page.add(field, ft.Row([
-        ft.ElevatedButton("добавить", on_click=add),
+        AddButton(add),
         ft.TextButton("оставить важные", on_click=clear),
     ]), ft.Divider(), lv)
 
